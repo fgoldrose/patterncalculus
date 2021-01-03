@@ -1,0 +1,16 @@
+Group
+  structure AST
+  structure Token
+  structure Parse
+  structure Scan
+  structure Eval
+  structure Interpret
+is
+  $/basis.cm
+  $/smlnj-lib.cm
+  ast.sml
+  token.sml
+  parse.sml
+  scan.sml
+  eval.sml
+  interpret.sml
