@@ -4,86 +4,61 @@ structure Eval : sig
 
 end = struct
 
-  structure Map = RedBlackMapFn (struct
-    type ord_key = string
-    val compare = String.compare
-  end)
-
-
   fun err info = raise Fail ("runtime error: " ^ info)
-  
-  fun subst m t =
-        (case t of
-          AST.Var s => 
-            (case Map.find (m, s) of 
-                NONE => AST.Var s
-              | SOME (v, path) => v 
-            )
-          | AST.App (t1, t2) => AST.App (subst m t1, subst m t2)
-          | AST.Case (t1, t2) => AST.Case (subst m t1, subst m t2) 
-                    (* doesnt avoid variable clash! *)
 
-        )
-  fun match x y path =
-        (case (x, y) of
+  fun union x = Map.unionWith (fn (v1, v2) => v2) x
+
+  fun match x y bindings =
+        ((*print("match: " ^ AST.tos x ^ " ; " ^AST.tos y ^ "\n");*)
+          case (x, y) of
           (AST.App(x1, x2), AST.App (y1, y2)) =>
-
-            (case (match x1 y1 " L") of
+            (case (match x1 y1 bindings) of
               SOME map1 =>
-                (case (match x2 y2 " R") of
+                (case (match x2 y2 bindings) of
                   SOME map2 =>
                     if Map.existsi (fn (i,n) => Map.inDomain(map1, i)) map2
                     then NONE
-                    else SOME (Map.unionWith (fn (v1, v2) => v1) (map1, map2))
+                    else SOME (union (map1, map2))
                     
                   | _ => NONE
                 )
               | _ => NONE
             )
           | (v, AST.Var sy) =>
-            if v = (AST.Var sy) then
-              SOME Map.empty
-            else
-              (print(sy^ (AST.tos v)) ;
-                            SOME (Map.singleton (sy, (v, path))))
+            (case Map.find (bindings, sy) of
+                          NONE =>  (SOME (Map.singleton (sy, v)))
+                          | SOME b => if v = b then 
+                                    SOME Map.empty
+                                    else NONE)
+          | (AST.Var sx, v) =>
+            (case Map.find (bindings, sx) of
+                NONE => NONE
+                |SOME b => match b v bindings)
           | _ => NONE
         )
 
-
-  fun step t =
-    (case t of
+  and doEval t bindings =
+    ((*print("eval: " ^ AST.tos t ^ "\n");
+      print(("bindings: " ^ concat (Map.listKeys bindings) )^ "\n");*)
+      case t of 
       AST.App (t1, t2) =>
-        (case (step t1) of
-            SOME t1' => SOME (AST.App(t1', t2))
-          | NONE =>
-           (case (step t2) of
-              SOME t2' => SOME (AST.App(t1, t2'))
-            | NONE =>
-              (case t1 of
-                AST.Case (left, right) => 
-                (case match t2 left "" of
-                    NONE => SOME (AST.Case (AST.Var " x", AST.Var " x"))
-                  | SOME map => SOME (subst map right))
-                | _ => NONE)
+        (case doEval t1 bindings of
+          AST.Case(left, right) => 
+            (case match (doEval t2 bindings) left bindings of
+                NONE => AST.Case (AST.Var " x", AST.Var " x")
+              | SOME b => doEval right (union (b, bindings))
             )
+          | t1' => AST.App(t1', doEval t2 bindings)
         )
-      | AST.Case (t1, t2) =>
-        (case (step t1) of
-            SOME t1' => SOME (AST.Case (t1', t2))
-          | NONE => NONE
-        ) 
-      | _ => NONE
+      | AST.Case (t1, t2) => AST.Case(doEval t1 bindings, t2)
+      | AST.Var x =>
+        case Map.find (bindings, x) of
+            NONE => AST.Var x
+          | SOME v => v
     )
 
   fun eval t =
-    let
-      fun lp t =
-        (case step t of
-           SOME t' => lp t'
-         | NONE => t)
-    in
-      lp t
-    end
+     doEval t Map.empty
      
       
 end

@@ -5,6 +5,10 @@ Group
   structure Scan
   structure Eval
   structure Interpret
+  structure Map
+  structure Set
+  structure Tests
+  structure Check
 is
   $/basis.cm
   $/smlnj-lib.cm
@@ -14,3 +18,7 @@ is
   scan.sml
   eval.sml
   interpret.sml
+  map.sml
+  set.sml
+  tests.sml
+  check.sml
