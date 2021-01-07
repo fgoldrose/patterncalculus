@@ -13,28 +13,33 @@ end = struct
             
   fun nextTerm toks =
     let
-      fun lp (T.Var x :: ts) = SOME (AST.Var x, ts) 
+      fun lp (T.Var x :: ts) =  (AST.Var x, ts)
         | lp (T.LParen :: ts) =
           (case nextTerm ts of
-                SOME (t1, T.RightArrow :: ts1) =>
-                  (case nextTerm ts1 of
-                      SOME (t2, T.RParen :: ts2) => 
-                        SOME (AST.Case (t1, t2), ts2)
-                      | _ => err "at end of case")
-                | SOME (t1, ts1) =>
-                  (case nextTerm ts1 of
-                      SOME (t2, T.RParen :: ts2) => 
-                        SOME (AST.App (t1, t2), ts2)
-                      | _ => err "at end of application")
-                | _ => err "within application or case")
-        | lp ts = err ("in term at " ^ toksStr ts)
+            (t, T.RParen :: ts1) => (t, ts1)
+            | _ => err "error at end of parens"
+          )
+        | lp ts = err "error at " toksStr ts
+
+      and combine (t1, []) = (t1, [])
+        | combine (t1, T.RParen :: ts) = (t1, T.RParen :: ts)
+        | combine (t1, (T.RightArrow :: ts)) =
+            (case lp ts of
+                  (t2, []) => (AST.Case(t1, t2), [])
+                  | (t2, r) => (case combine (t2, r) of
+                                (t3, r') => (AST.Case(t1, t3), r'))
+            )
+        | combine (t1, ts) = 
+            (case lp ts of
+                  (t2, r) => combine(AST.App(t1, t2), r)
+            )
   in
-    lp toks
+    combine(lp toks)
   end
 
   fun parse tokens =
     (case nextTerm tokens of
-        SOME (t, []) => t
-      | SOME (t, ts) => err (": too many tokens " ^ toksStr ts)
-      | NONE => err "no main term?")
+        (t, []) => t
+      | (t, ts) => err (": too many tokens " ^ toksStr ts)
+    )
 end

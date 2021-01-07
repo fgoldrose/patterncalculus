@@ -1,11 +1,12 @@
 Group
   structure AST
+  structure CAST
+  structure Map
   structure Token
   structure Parse
   structure Scan
   structure Eval
   structure Interpret
-  structure Map
   structure Set
   structure Tests
   structure Check
@@ -13,12 +14,13 @@ is
   $/basis.cm
   $/smlnj-lib.cm
   ast.sml
+  cast.sml
+  map.sml
   token.sml
   parse.sml
   scan.sml
   eval.sml
   interpret.sml
-  map.sml
   set.sml
   tests.sml
   check.sml
