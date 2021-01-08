@@ -1,6 +1,7 @@
 Group
   structure AST
-  structure CAST
+  structure SAST
+  structure Desugar
   structure Map
   structure Token
   structure Parse
@@ -14,7 +15,8 @@ is
   $/basis.cm
   $/smlnj-lib.cm
   ast.sml
-  cast.sml
+  sast.sml
+  desugar.sml
   map.sml
   token.sml
   parse.sml

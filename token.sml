@@ -5,9 +5,11 @@ structure Token = struct
     | LParen
     | RParen
     | RightArrow
+    | Bar
     
   fun tos (Var x) = "Var(" ^ x ^ ")"
     | tos LParen = "LParen"
     | tos RParen = "RParen"
     | tos RightArrow = "RightArrow"
+    | tos Bar = "Bar"
 end

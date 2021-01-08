@@ -1,7 +1,7 @@
 structure Check : sig
 
   (* check if two items are equal by built-in polymorphic equality *)
-  val expect : (''a -> string) *  ''a * ''a * string -> unit
+  val expect : (AST.term -> string) *  AST.term * AST.term * string -> unit
 
   (* check if given boolean is true *)
   val assertT : bool * string -> unit
@@ -43,7 +43,7 @@ end = struct
     let 
       val message = "in " ^m^ ": got " ^ (tos x) ^ " but expected " ^ (tos y) ^ "\n"
     in
-    if x=y then () else raise Fail (msg "expect" message)
+    if AST.eq(x,y) then () else raise Fail (msg "expect" message)
     end
                               
   fun expectBy (eq, x, y, m) =
