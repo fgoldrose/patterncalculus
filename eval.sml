@@ -1,14 +1,11 @@
 structure Eval : sig
 
   val eval : AST.term -> AST.term
-  val ev : AST.term * AST.term list -> AST.term
+  val step : AST.term -> AST.term option
   val match: (AST.term * AST.term) -> bool
 end = struct
 
   fun err info = raise Fail ("runtime error: " ^ info)
-
-  fun union (x, y) = Map.unionWith (fn (v1, v2) => v2) (x, y)
-
 
   fun match (l, a) =
     (case (l, a) of
@@ -24,43 +21,56 @@ end = struct
         [] => t
       | AST.Left :: p' => (case t of
                           AST.App(l, _) => followpath p' l
-                          | _ => err "path does not exist in term")
+                          | _ => err "path not valid")
       | AST.Right :: p' => (case t of
                           AST.App(_, r) => followpath p' r
-                          | _ => err "path does not exist in term")
-
-  fun getval env i p = 
-    case env of
-      [] => err "bound variable exists without a valid binding"
-      | t :: xs => if i = 0 then followpath p t else getval xs (i-1) p
+                          | _ => err "path not valid")
 
 
-  fun ev (t, env) =
-    (case t of        
-        AST.Free x => AST.Free x
-      | AST.Bound(i, p) => getval env i p
-      | AST.Wildcard => AST.Wildcard
-      | AST.Case (t1, t2) => AST.Case(ev (t1, env), t2)
-      | AST.App(t1, t2) =>
-          let
-            val t1' = ev(t1,env)
-
-            val t2' = ev(t2, env)
-          in
-          (case t1' of
-            AST.Case(left, right) => 
-                          if match(left, t2')
-                          then ev(right, t2' :: env)
-                          else AST.Case(AST.Wildcard, AST.Bound(0, []))
-          
-            | _ => AST.App(t1', t2')
-          )
-          end
-
-             
+  fun opening u t =
+    let
+      fun sub k u t = (case t of
+        AST.Bound(i,p) => if i = k then followpath p u else t
+      | AST.App(t1,t2) => AST.App(sub k u t1, sub k u t2)
+      | AST.Case(l,r) => AST.Case(sub k u l, sub (k+1) u r)
+      | _ => t
     )
+    in
+      sub 0 u t
+    end
+    
+
+  fun step t =
+    (case t of        
+        AST.Free x => NONE
+      | AST.Bound(i, p) => NONE
+      | AST.Wildcard => NONE
+      | AST.Case (t1, t2) => 
+      (case step t1 of
+        SOME t1' => SOME (AST.Case(t1', t2))
+        | NONE => (case step t2 of
+          SOME t2' => SOME (AST.Case(t1, t2'))
+          | NONE => NONE))
+
+      | AST.App(t1, t2) =>
+          (case step t2 of
+            SOME t2' => SOME (AST.App(t1, t2'))
+            | NONE => 
+                (case t1 of
+                  AST.Case(l,r) => 
+                      (case step l of
+                        SOME l' => SOME (AST.App( AST.Case(l',r), t2))
+                        | NONE => 
+                          if match(l, t2) 
+                          then SOME (opening t2 r)
+                          else SOME (AST.Case(AST.Wildcard, AST.Bound(0, []))))
+                  | _ => (case step t1 of
+                            SOME t1' => SOME (AST.App(t1',t2))
+                          | NONE => NONE ))))
 
   fun eval t =
-     ev (t, [])
+   ( case step t of
+         NONE => t
+         | SOME t' => eval t')
       
 end
