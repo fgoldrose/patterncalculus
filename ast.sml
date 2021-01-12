@@ -1,14 +1,16 @@
 structure AST = struct
 
 
+  datatype direction = Left | Right
+
   datatype term
-    = Var of string
+    = Free of string
+    | Bound of int * (direction list)
     | App of term * term
     | Case of term * term
-    | Closure of term * term * (term Map.map)
+    | Wildcard
 
-
-  fun eq (tx, ty) =
+  (*fun eq (tx, ty) =
     (case (tx, ty) of
         (Var x, Var y) => x = y
       | (Case (tx1, tx2), Case (ty1, ty2)) => 
@@ -23,14 +25,17 @@ structure AST = struct
                           )
                         ) my)
       | _ => false
-    )
+    )*)
 
-  fun mapTos m = concat (map (fn (k, v) => "(" ^ k ^ ", " ^ tos v ^ ")") (Map.listItemsi m))
+  fun pathTos [] = ""
+    | pathTos (Left :: p) = "L" ^ pathTos p 
+    | pathTos (Right :: p) = "R" ^ pathTos p
 
-  and tos (Var x) = x
+  and tos (Free x) = x
+    | tos (Bound (i, p)) = Int.toString i ^ "." ^ pathTos p
     | tos (App (t1, t2)) = "(" ^ tos t1 ^ " " ^ tos t2 ^ ")"
     | tos (Case (t1, t2)) =  "(" ^ tos t1 ^ "->" ^ tos t2 ^ ")"
-    | tos (Closure (t1, t2, m)) =  "(" ^ tos t1 ^ "->" ^ tos t2 ^ ")" ^ "[" ^ mapTos m ^ "]"
+    | tos Wildcard = "_"
     
                   
                   

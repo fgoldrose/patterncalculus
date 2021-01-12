@@ -2,7 +2,7 @@ structure Interpret : sig
 
   val interpret        : string -> AST.term
   val show        : string -> string
-  val ienv        : string -> AST.term Map.map -> AST.term 
+  val ienv        : string -> AST.term list -> AST.term 
 
 end = struct
 

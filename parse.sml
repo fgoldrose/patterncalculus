@@ -30,12 +30,12 @@ end = struct
                   | (t2, r) => (case combine (t2, r) of
                                 (t3, r') => (SAST.Case(t1, t3), r'))
             )
-        | combine (t1, (T.Bar :: ts)) =
+        (*| combine (t1, (T.Bar :: ts)) =
             (case lp ts of
                   (t2, []) => (SAST.Or(t1, t2), [])
                   | (t2, r) => (case combine (t2, r) of
                                 (t3, r') => (SAST.Or(t1, t3), r'))
-            )
+            )*)
         | combine (t1, ts) = 
             (case lp ts of
                   (t2, r) => combine(SAST.App(t1, t2), r)
