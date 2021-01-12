@@ -1,68 +1,76 @@
 structure Eval : sig
 
   val eval : AST.term -> AST.term
-  val ev : AST.term * AST.term Map.map -> AST.term
-  val match: (AST.term * AST.term * (AST.term Map.map)) -> (AST.term Map.map) option
-
+  val step : AST.term -> AST.term option
+  val match: (AST.term * AST.term) -> bool
 end = struct
 
   fun err info = raise Fail ("runtime error: " ^ info)
 
-  fun union (x, y) = Map.unionWith (fn (v1, v2) => v2) (x, y)
-
-
-  fun match (l:AST.term, a:AST.term, env): (AST.term Map.map) option =
-    (case (l, a) of 
-        (AST.Var x, t) => (case Map.find(env, x) of
-                                NONE => SOME (Map.singleton (x, t))
-                              | SOME t' => if AST.eq(t,t') 
-                                          then SOME Map.empty
-                                          else NONE
-                          )
-        | (AST.App(l1, l2), AST.App(a1, a2)) =>
-            (case (match (l1, a1, env)) of
-                NONE => NONE
-              | SOME map1 => 
-                (case (match (l2, a2, env)) of
-                  NONE => NONE
-                | SOME map2 => 
-                    if Map.existsi (fn (i, _) => Map.inDomain(map1, i)) map2
-                    then NONE
-                    else SOME (union (map1, map2))
-                )
-              )
-        | _ => NONE
+  fun match (l, a) =
+    (case (l, a) of
+          (AST.Wildcard, _) => true
+        | (AST.Free x, AST.Free y) => x = y
+        | (AST.App(l1, l2), AST.App(a1, a2)) => match(l1, a1) andalso match(l2, a2)
+        | _ => false
       )
 
-  fun ev (t, env) =
-    (case t of
-        AST.Var x =>
-          (case Map.find (env, x) of
-              NONE => (AST.Var x)
-            | SOME v => v
-          )
 
-      | AST.Case (t1, t2) => AST.Closure(ev(t1, env), t2, env)
+  fun followpath p t =
+    case p of
+        [] => t
+      | AST.Left :: p' => (case t of
+                          AST.App(l, _) => followpath p' l
+                          | _ => err "path not valid")
+      | AST.Right :: p' => (case t of
+                          AST.App(_, r) => followpath p' r
+                          | _ => err "path not valid")
 
-      | AST.Closure(t1, t2, m) => AST.Case(t1, ev(t2, m))
+
+  fun opening u t =
+    let
+      fun sub k u t = (case t of
+        AST.Bound(i,p) => if i = k then followpath p u else t
+      | AST.App(t1,t2) => AST.App(sub k u t1, sub k u t2)
+      | AST.Case(l,r) => AST.Case(sub k u l, sub (k+1) u r)
+      | _ => t
+    )
+    in
+      sub 0 u t
+    end
+    
+
+  fun step t =
+    (case t of        
+        AST.Free x => NONE
+      | AST.Bound(i, p) => NONE
+      | AST.Wildcard => NONE
+      | AST.Case (t1, t2) => 
+      (case step t1 of
+        SOME t1' => SOME (AST.Case(t1', t2))
+        | NONE => (case step t2 of
+          SOME t2' => SOME (AST.Case(t1, t2'))
+          | NONE => NONE))
 
       | AST.App(t1, t2) =>
-          let
-            val t1' = ev(t1, env)
-            val t2' = ev(t2, env)
-          in
-          case t1' of
-            AST.Closure(left, right, env') =>
-                      (case match(left, t2', env') of
-                          SOME m => ev(right, union (env', m))
-                        | NONE => AST.Case(AST.Var "x", AST.Var "x")
-                      )
-            | _ => AST.App(t1', t2')
-          end
-             
-    )
+          (case step t2 of
+            SOME t2' => SOME (AST.App(t1, t2'))
+            | NONE => 
+                (case t1 of
+                  AST.Case(l,r) => 
+                      (case step l of
+                        SOME l' => SOME (AST.App( AST.Case(l',r), t2))
+                        | NONE => 
+                          if match(l, t2) 
+                          then SOME (opening t2 r)
+                          else SOME (AST.Case(AST.Wildcard, AST.Bound(0, []))))
+                  | _ => (case step t1 of
+                            SOME t1' => SOME (AST.App(t1',t2))
+                          | NONE => NONE ))))
 
   fun eval t =
-     ev(ev (t, Map.empty), Map.empty)
+   ( case step t of
+         NONE => t
+         | SOME t' => eval t')
       
 end

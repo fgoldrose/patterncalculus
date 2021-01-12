@@ -4,7 +4,6 @@ structure SAST = struct
     = Var of string
     | App of term * term
     | Case of term * term
-    | Or of term * term
 
 
   fun tos (Var x) = x
