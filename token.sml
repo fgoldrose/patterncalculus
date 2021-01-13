@@ -6,10 +6,12 @@ structure Token = struct
     | RParen
     | RightArrow
     | Bar
+    | Underscore
     
   fun tos (Var x) = "Var(" ^ x ^ ")"
     | tos LParen = "LParen"
     | tos RParen = "RParen"
     | tos RightArrow = "RightArrow"
     | tos Bar = "Bar"
+    | tos Underscore = "Underscore"
 end

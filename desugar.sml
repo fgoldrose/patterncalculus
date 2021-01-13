@@ -11,38 +11,68 @@ end = struct
 
     fun disjointunion(x, y) = 
       if Map.existsi (fn (i, _) => Map.inDomain(x, i)) y
-      then Map.empty
-      else Map.unionWith (fn (v1, v2) => v2) (x, y)
+      then raise Fail "variable reuse in pattern is not allowed (e.g. (x x)->x)"
+      else Map.unionWith (fn (v1, v2) => v1) (x, y)
 
 
-    fun getsubs t path =
+    
+
+    fun incrlevel t = 
       (case t of
-        A.Free x => Map.singleton(x, (path,0))
-      | A.App (t1, t2) =>  
-          disjointunion 
-          (getsubs t1 (path @ [A.Left]), getsubs t2 (path @ [A.Right]))
-      | _ => Map.empty
+          A.Bound(l, p) => A.Bound(l+1, p)
+        | A.Or (t1, t2) => A.Or (incrlevel t1, incrlevel t2)
+        | _ => t)
+
+    (*bind the term and return the new substitutions map as well.
+      Called on the right side of case.*)
+    fun getsubs t path subs =
+      (case t of
+        S.Var x => (case Map.find(subs, x) of
+                        SOME v => (v, Map.empty)
+                        | NONE => (A.Wildcard, Map.singleton(x, A.Bound (0, path)))
+                      )   
+      | S.App (t1, t2) =>
+        let
+          val (v1, s1) = getsubs t1 (path @ [A.Left]) subs
+          val (v2, s2) = getsubs t2 (path @ [A.Right]) subs
+        in
+          (A.App(v1, v2), disjointunion(s1, s2))
+        end
+      | S.Or (t1, t2) =>
+        let
+          val (b1, s1) = getsubs t1 path subs
+          val (b2, s2) = getsubs t2 path subs
+          val ormap = Map.intersectWith (fn (v1, v2) => A.Or(v1, v2)) (s1, s2)
+        in
+          (A.Or(b1, b2), ormap)
+        end
+      | _ => (bindvars t subs, Map.empty)
 
       )
 
-    fun bindvars t subs wild =
+
+    and bindvars t subs =
       (case t of
           S.Var x => (case Map.find(subs, x) of
-                        SOME (p, l) => A.Bound(l, p)
-                        | NONE => if wild then A.Wildcard else A.Free x
+                        SOME v => v
+                        | NONE => A.Free x
                       )
+        | S.Wildcard => A.Wildcard
+        | S.Or (t1, t2) => A.Or(bindvars t1 subs, bindvars t2 subs)
 
-        | S.App (t1, t2) => A.App(bindvars t1 subs wild, bindvars t2 subs wild)
+        | S.App (t1, t2) => A.App(bindvars t1 subs, bindvars t2 subs)
         | S.Case (t1, t2) => 
-          A.Case(bindvars t1 subs true, 
-            bindvars t2 (disjointunion(
-                          Map.map (fn (p, l) => (p, l+ 1)) subs,
-                          getsubs (bindvars t1 subs false) [])) wild)
-          
+          let
+            val incrsubs = Map.map incrlevel subs
+            val (leftbound, newsubs) = getsubs t1 [] subs
+            val rightbound = bindvars t2 (disjointunion (incrsubs, newsubs))
+          in
+          A.Case(leftbound, rightbound)
+          end     
       )
 
     fun desugar t =
-      bindvars t Map.empty false
+      bindvars t Map.empty
 
     fun ds s = desugar (Parse.parse (Scan.scan s));
 

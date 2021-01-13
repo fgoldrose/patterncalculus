@@ -14,6 +14,7 @@ end = struct
   fun nextTerm toks =
     let
       fun lp (T.Var x :: ts) =  (SAST.Var x, ts)
+        | lp (T.Underscore :: ts) = (SAST.Wildcard, ts)
         | lp (T.LParen :: ts) =
           (case nextTerm ts of
             (t, T.RParen :: ts1) => (t, ts1)
@@ -30,12 +31,12 @@ end = struct
                   | (t2, r) => (case combine (t2, r) of
                                 (t3, r') => (SAST.Case(t1, t3), r'))
             )
-        (*| combine (t1, (T.Bar :: ts)) =
+        | combine (t1, (T.Bar :: ts)) =
             (case lp ts of
                   (t2, []) => (SAST.Or(t1, t2), [])
                   | (t2, r) => (case combine (t2, r) of
                                 (t3, r') => (SAST.Or(t1, t3), r'))
-            )*)
+            )
         | combine (t1, ts) = 
             (case lp ts of
                   (t2, r) => combine(SAST.App(t1, t2), r)

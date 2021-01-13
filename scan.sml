@@ -29,6 +29,7 @@ end = struct
     | nextToken (#"(" :: cs) = SOME (T.LParen, cs)
     | nextToken (#")" :: cs) = SOME (T.RParen, cs)
     | nextToken (#"|" :: cs) = SOME (T.Bar, cs)
+    | nextToken (#"_" :: cs) = SOME (T.Underscore, cs)
     | nextToken (#"-" :: #">" :: cs) = SOME (T.RightArrow, cs)
     | nextToken (c :: cs) =
       if Char.isLower c then var c cs

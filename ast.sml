@@ -9,23 +9,8 @@ structure AST = struct
     | App of term * term
     | Case of term * term
     | Wildcard
-
-  (*fun eq (tx, ty) =
-    (case (tx, ty) of
-        (Var x, Var y) => x = y
-      | (Case (tx1, tx2), Case (ty1, ty2)) => 
-          eq(tx1, ty1) andalso eq(tx2, ty2)
-      | (App (tx1, tx2), App (ty1, ty2)) => 
-          eq(tx1, ty1) andalso eq(tx2, ty2)
-      | (Closure (tx1, tx2, mx), Closure (ty1, ty2, my)) => 
-          eq(tx1, ty1) andalso eq(tx2, ty2) andalso 
-            (Map.alli (fn (k, v) => (case Map.find (mx, k) of
-                            NONE => false
-                          | SOME t => eq(t, v)
-                          )
-                        ) my)
-      | _ => false
-    )*)
+    | Or of term * term
+    | None
 
   fun pathTos [] = ""
     | pathTos (Left :: p) = "L" ^ pathTos p 
@@ -36,6 +21,8 @@ structure AST = struct
     | tos (App (t1, t2)) = "(" ^ tos t1 ^ " " ^ tos t2 ^ ")"
     | tos (Case (t1, t2)) =  "(" ^ tos t1 ^ "->" ^ tos t2 ^ ")"
     | tos Wildcard = "_"
+    | tos (Or (t1, t2)) =  "(" ^ tos t1 ^ "|" ^ tos t2 ^ ")"
+    | tos None = "NONE"
     
                   
                   
