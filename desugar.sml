@@ -24,12 +24,12 @@ end = struct
         | _ => t)
 
     (*bind the term and return the new substitutions map as well.
-      Called on the right side of case.*)
+      Called on the left side of case.*)
     fun getsubs t path subs =
       (case t of
         S.Var x => (case Map.find(subs, x) of
                         SOME v => (v, Map.empty)
-                        | NONE => (A.Wildcard, Map.singleton(x, A.Bound (0, path)))
+                        | NONE => (A.Wildcard, Map.singleton(x, A.Bound (1, path)))
                       )   
       | S.App (t1, t2) =>
         let
@@ -45,6 +45,13 @@ end = struct
           val ormap = Map.intersectWith (fn (v1, v2) => A.Or(v1, v2)) (s1, s2)
         in
           (A.Or(b1, b2), ormap)
+        end
+      | S.Def (t1, t2) =>
+       let
+          val (v1, s1) = getsubs t1 path subs
+          val (v2, s2) = getsubs t2 path subs
+        in
+          (v2, disjointunion(s1, s2))
         end
       | _ => (bindvars t subs, Map.empty)
 
@@ -68,7 +75,9 @@ end = struct
             val rightbound = bindvars t2 (disjointunion (incrsubs, newsubs))
           in
           A.Case(leftbound, rightbound)
-          end     
+          end
+        | S.Let (t1, t2, t3) => bindvars (S.App(S.Case(t1, t3),t2)) subs
+        | S.Def (t1, t2) => bindvars t2 subs
       )
 
     fun desugar t =

@@ -19,7 +19,7 @@ end = struct
     end
 
   fun var f cs = (* pass first char as f *)
-    (case collect Char.isLower cs of
+    (case collect Char.isAlphaNum cs of
      (lowers, cs') => SOME (T.Var (implode (f::lowers)), cs'))
 
   fun nextToken [] = NONE
@@ -30,9 +30,10 @@ end = struct
     | nextToken (#")" :: cs) = SOME (T.RParen, cs)
     | nextToken (#"|" :: cs) = SOME (T.Bar, cs)
     | nextToken (#"_" :: cs) = SOME (T.Underscore, cs)
+    | nextToken (#":" :: cs) = SOME (T.Colon, cs)
     | nextToken (#"-" :: #">" :: cs) = SOME (T.RightArrow, cs)
     | nextToken (c :: cs) =
-      if Char.isLower c then var c cs
+      if Char.isAlphaNum c then var c cs
       else raise Fail ("scan error: " ^ implode (c::cs))
 
   fun scan code =

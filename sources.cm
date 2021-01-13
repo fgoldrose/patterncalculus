@@ -9,6 +9,7 @@ Group
   structure Eval
   structure Interpret
   structure Tests
+  structure Read
 is
   $/basis.cm
   $/smlnj-lib.cm
@@ -22,3 +23,4 @@ is
   eval.sml
   interpret.sml
   tests.sml
+  read.sml

@@ -7,6 +7,7 @@ structure Token = struct
     | RightArrow
     | Bar
     | Underscore
+    | Colon
     
   fun tos (Var x) = "Var(" ^ x ^ ")"
     | tos LParen = "LParen"
@@ -14,4 +15,5 @@ structure Token = struct
     | tos RightArrow = "RightArrow"
     | tos Bar = "Bar"
     | tos Underscore = "Underscore"
+    | tos Colon = "Colon"
 end

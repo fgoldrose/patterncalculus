@@ -22,6 +22,10 @@ fun ce (x, y, m) =
     ce("(r->((b->b) r)) (q|(q z))", AST.Free("q"), "ortest8");
     print "\n")
 
+  fun def_tests() = (
+    
+    )
+
   fun run () =(
     print ">>> running tests...\n";
     ce ("((x->x) y)", AST.Free "y", "test0");
@@ -35,11 +39,11 @@ fun ce (x, y, m) =
     ce("((x -> ((((a b) -> (y -> a)) x) ((a->a) x))) (q p))", AST.Free "q", "test7");
     ce("((x -> (((p -> (y -> s)) x) (r x))) d)", AST.Free "s", "test9");
     ce("((x -> (((a b) -> yes) x)) (q p))", AST.Free "yes", "test10");
-    ce("(x->x y->y) z", AST.Case(AST.App(AST.Free "z", AST.Wildcard), AST.Bound(0, [AST.Right])), "test11");
+    ce("(x->x y->y) z", AST.Case(AST.App(AST.Free "z", AST.Wildcard), AST.Bound(1, [AST.Right])), "test11");
     ce("((p z)-> ((a->(a->a) z) p)) (p p)", AST.Free "p", "test12");
     ce("((x->x) x -> y) z", AST.Free("y"), "test14");
     ce("(x->((x -> y) z)) i", AST.None, "test15");
-    ce("(x->y a->(x y)) z", AST.Case(AST.App(AST.Wildcard, AST.Wildcard), AST.App(AST.Free "z", AST.Bound(0, [AST.Left]))), "test16");
+    ce("(x->y a->(x y)) z", AST.Case(AST.App(AST.Wildcard, AST.Wildcard), AST.App(AST.Free "z", AST.Bound(1, [AST.Left]))), "test16");
     or_tests();
     print "<<< tests done.\n")
     

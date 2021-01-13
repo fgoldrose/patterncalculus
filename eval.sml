@@ -5,19 +5,7 @@ structure Eval : sig
   val match: (AST.term * AST.term) -> bool
 end = struct
 
-  fun err info = raise Fail ("runtime error: " ^ info)
-
-  fun match (l, a) =
-    (case (l, a) of
-          (AST.Wildcard, _) => true
-        | (_, AST.Wildcard) => true
-        | (AST.Free x, AST.Free y) => x = y
-        | (AST.App(l1, l2), AST.App(a1, a2)) => match(l1, a1) andalso match(l2, a2)
-        | (AST.Or(t1, t2), t) => match(t1, t) orelse match(t2, t)
-        | (t, AST.Or(t1, t2)) => match(t, t1) orelse match(t, t2) 
-        | _ => false
-      )    
-
+  fun err info = raise Fail ("runtime error: " ^ info)  
 
   fun followpath p t =
     (case (p, t) of
@@ -37,16 +25,36 @@ end = struct
       | _ => t
     )
     in
-      sub 0 u t
+      sub 1 u t
     end
     
+
+  fun match (l, a) =
+    let
+      val v = (case (l, a) of
+          (AST.Wildcard, _) => true
+        | (_, AST.Wildcard) => true
+        | (AST.Free x, AST.Free y) => x = y
+        | (AST.App(l1, l2), AST.App(a1, a2)) => match(l1, a1) andalso match(l2, a2)
+        | (AST.Or(t1, t2), t) => match(t1, t) orelse match(t2, t)
+        | (t, AST.Or(t1, t2)) => match(t, t1) orelse match(t, t2)
+        | _ => false
+      )
+    in
+      (*print ("match " ^AST.tos l ^ AST.tos a ^ (if v then " true\n" else " false\n"));*)
+      v
+    end
 
   (*step when in left side of case.
     Should not reduce right sides of case
     or reduce or, so that it can be properly matched later.*)
-  fun casestep t = 
+  and casestep t = 
     (case t of
-      AST.Or (t1, t2) => NONE
+      AST.Or (t1, t2) => 
+        (case casestep t1 of
+          SOME t1' => SOME (AST.Or(t1', t2))
+          | NONE => NONE)
+          
       | AST.Case (t1, t2) =>
         (case casestep t1 of
             SOME t1' => SOME (AST.Case(t1', t2))
