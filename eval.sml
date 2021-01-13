@@ -10,23 +10,22 @@ end = struct
   fun match (l, a) =
     (case (l, a) of
           (AST.Wildcard, _) => true
+        | (_, AST.Wildcard) => true
         | (AST.Free x, AST.Free y) => x = y
         | (AST.App(l1, l2), AST.App(a1, a2)) => match(l1, a1) andalso match(l2, a2)
-        | (AST.Or(t1, t2), t) => match(t1, t) orelse match(t2, t) 
+        | (AST.Or(t1, t2), t) => match(t1, t) orelse match(t2, t)
+        | (t, AST.Or(t1, t2)) => match(t, t1) orelse match(t, t2) 
         | _ => false
-      )
+      )    
 
 
   fun followpath p t =
-    (case p of
-            [] => t
-          | AST.Left :: p' => (case t of
-                              AST.App(l, _) => followpath p' l
-                              | _ => AST.None)
-          | AST.Right :: p' => (case t of
-                              AST.App(_, r) => followpath p' r
-                              | _ => AST.None)
-    )
+    (case (p, t) of
+      ([], _) => t
+      | (AST.Left :: p', AST.App(l, _)) => followpath p' l
+      | (AST.Right :: p', AST.App(_, r)) => followpath p' r
+      | (_, AST.Or(t1, t2)) => AST.Or(followpath p t1, followpath p t2)
+      | _ => AST.None)
 
   fun opening u t =
     let
@@ -73,29 +72,24 @@ end = struct
             SOME t2' => SOME (AST.Case(t1, t2'))
             | NONE => NONE))
 
-      
-      | AST.App(AST.Or(t1, t2), t3) => 
-          SOME (AST.Or(AST.App(t1, t3), AST.App(t2, t3)))
-      | AST.App(t1, AST.Or(t2, t3)) => 
-          SOME (AST.Or(AST.App(t1, t2), AST.App(t1, t3)))
-
       | AST.App(AST.None, _) => SOME AST.None
       | AST.App(_, AST.None) => SOME AST.None
       
       | AST.App(t1, t2) =>
-          (case (t1, step t2) of
-              (_, SOME t2') => SOME (AST.App(t1, t2'))
-            | (AST.Case(l,r), NONE) =>
-                      (case casestep l of
-                        SOME l' => SOME (AST.App( AST.Case(l',r), t2))
-                        | NONE => 
-                          if match(l, t2) 
-                          then SOME (opening t2 r)
-                          else SOME AST.None)
-            | (_, NONE) =>
-                (case step t1 of 
-                    SOME t1' => SOME (AST.App(t1',t2))
-                  | NONE => NONE)))
+          (case casestep t2 of
+            SOME t2' => SOME (AST.App(t1, t2'))
+            | NONE => 
+              (case casestep t1 of
+                SOME t1' => SOME (AST.App(t1', t2))
+                | NONE => (case (t1, t2) of
+                  (AST.Case(l,r), _) =>
+                    if match(l, t2) 
+                    then SOME (opening t2 r)
+                    else SOME AST.None
+                  | (AST.Or(o1, o2), _) => SOME (AST.Or(AST.App(o1, t2), AST.App(o2, t2)))
+                  | (_, AST.Or(o1, o2)) => SOME (AST.Or(AST.App(t1, o1), AST.App(t1, o2)))
+                  | (_, _) => NONE)
+                  )))
 
   fun eval t =
    ( case step t of
