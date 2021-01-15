@@ -1,7 +1,3 @@
-((rec->
-(length-> (length (node j (node q empty)))
-) (rec (len->((_ rest->((s ((rec len) rest))))|(_->o))))
-) (f->f f))
 
 (
 rec: (f->f f)
