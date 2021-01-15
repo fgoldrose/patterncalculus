@@ -17,10 +17,11 @@ end = struct
 
   fun opening u t =
     let
-      fun sub k u t = (case t of
+      fun sub k u t = 
+        (case t of
         AST.Bound(i,p) => if i = k then followpath p u else t
-      | AST.App(t1,t2) => AST.App(sub k u t1, sub k u t2)
-      | AST.Or(t1,t2) => AST.Or(sub k u t1, sub k u t2)
+      | AST.App(t1,t2) => AST.App(sub (k+1) u t1, sub (k+1) u t2)
+      | AST.Or(t1,t2) => AST.Or(sub (k+1) u t1, sub (k+1) u t2)
       | AST.Case(l,r) => AST.Case(sub k u l, sub (k+1) u r)
       | _ => t
     )
@@ -76,13 +77,12 @@ end = struct
       | AST.Case (t1, t2) => 
         (case casestep t1 of
           SOME t1' => SOME (AST.Case(t1', t2))
-          | NONE => (case step t2 of
-            SOME t2' => SOME (AST.Case(t1, t2'))
-            | NONE => NONE))
+          | NONE => NONE)
 
       | AST.App(AST.None, _) => SOME AST.None
       | AST.App(_, AST.None) => SOME AST.None
-      
+      (*| AST.App(AST.Or(o1, o2), t2) => SOME (AST.Or(AST.App(o1, t2), AST.App(o2, t2)))
+      | AST.App(t1, AST.Or(o1, o2)) => SOME (AST.Or(AST.App(t1, o1), AST.App(t1, o2)))*)
       | AST.App(t1, t2) =>
           (case casestep t2 of
             SOME t2' => SOME (AST.App(t1, t2'))
