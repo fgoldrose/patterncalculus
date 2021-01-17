@@ -9,24 +9,26 @@ end = struct
 
   fun followpath p t =
     (case (p, t) of
-      ([], _) => t
+      ([], _) => SOME t
       | (AST.Left :: p', AST.App(l, _)) => followpath p' l
       | (AST.Right :: p', AST.App(_, r)) => followpath p' r
       | (AST.Left :: p', AST.Case(l, _)) => followpath p' l
       | (AST.Right :: p', AST.Case(_, r)) => followpath p' r
-      | (_, AST.Or(t1, t2)) => AST.Or(followpath p t1, followpath p t2)
-      | _ => AST.None)    
+      | (_, AST.Or(t1, t2)) => (case (followpath p t1) of
+        SOME t1' => SOME t1'
+        | NONE => followpath p t2)
+       
+      | _ => NONE)    
 
   fun getbound ls i p =
     (case ls of
       [] => NONE
-      | x :: xs => if i = 0 then SOME (followpath p x) else getbound xs (i - 1) p)
+      | x :: xs => if i = 0 then (followpath p x) else getbound xs (i - 1) p)
 
   fun sub t env k =
     (case t of 
       AST.Bound(i, p) => (case getbound env (i-k) p of
                               NONE => t
-                              | SOME AST.None => t
                               | SOME v => v)
       | AST.Case (t1, t2) => AST.Case (sub t1 env k, sub t2 env (k + 1))
       | AST.Or (t1, t2) => AST.Or (sub t1 env k, sub t2 env k)
@@ -37,16 +39,17 @@ end = struct
   fun match (l, a) env debug =
     let
       val v = (case (l, a) of
-          (AST.Wildcard, _) => true
+        (AST.None, AST.None) => true
+        | (AST.None, _) => false
+        |  (AST.Wildcard, _) => true
+        | (_, AST.None) => false
         | (_, AST.Wildcard) => true
         | (AST.Free x, AST.Free y) => x = y
         | (AST.Bound (i, p), _) => (case getbound env i p of
                                       NONE => false
-                                      | SOME AST.None => false
                                       | SOME v => match(ev v env debug, a) env debug)
         | (_, AST.Bound (i, p)) => (case getbound env i p of
                                       NONE => false
-                                      | SOME AST.None => false
                                       | SOME v => match(l, ev v env debug) env debug)
         | (AST.App(l1, l2), AST.App(a1, a2)) => match(l1, a1) env debug andalso match(l2, a2) env debug
         | (AST.Case(l1, l2), AST.Case(a1, a2)) => match(l1, a1) env debug andalso match(l2, a2) env debug
@@ -68,7 +71,7 @@ end = struct
         (case t of        
         AST.Free x => AST.Free x
       | AST.Bound(i, p) => (case getbound env i p of
-                              NONE => t
+                              NONE => AST.None
                               | SOME v => ev v env debug)
 
       | AST.Wildcard => AST.Wildcard 
@@ -85,11 +88,11 @@ end = struct
             (AST.Case(l,r), t2') =>
               if match(l, t2') env debug
               then ev r (t2' :: env) debug
-              else AST.None
-            | (AST.None, _) => AST.None
-            | (_, AST.None) => AST.None
+              else AST.None 
             | (t1', AST.Or(o1, o2)) => ev (AST.Or((AST.App(t1', o1)), (AST.App(t1', o2)))) env debug 
             | (AST.Or(o1, o2), t2') => ev (AST.Or((AST.App(o1, t2')), (AST.App(o2, t2')))) env debug
+            | (AST.None, _) => AST.None
+            | (_, AST.None) => AST.None
             | (t1', t2') => AST.App(t1', t2')))
       
       in

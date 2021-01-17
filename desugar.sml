@@ -80,6 +80,7 @@ end = struct
                         | NONE => A.Free x
                       )
         | S.Wildcard => A.Wildcard
+        | S.None => A.None
         | S.Or (t1, t2) => A.Or(bindvars t1 subs, bindvars t2 subs)
 
         | S.App (t1, t2) => A.App(bindvars t1 subs, bindvars t2 subs)

@@ -57,6 +57,14 @@ structure Tests = struct
     
     )
 
+  fun none_tests() = (
+        print ">>> testing none...\n";
+        ce("((q ->a-> (a q)) (((a b)->a) x) t)", AST.None, "nonetest1");
+        ce("((q ->a-> a) (((a b)->a) x) t)", AST.Free "t", "nonetest2");
+        expect(Interpret.file "bools.txt", AST.Free "y", "bools"); 
+        print "\n")
+
+
   fun run () =(
     print ">>> running tests...\n";
     ce ("((x->x) y)", AST.Free "y", "test0");
@@ -78,6 +86,7 @@ structure Tests = struct
     or_tests();
     casebind_tests();
     recursion_tests();
+    none_tests();
     print "<<< tests done.\n")
     
 

@@ -15,6 +15,7 @@ end = struct
     let
       fun lp (T.Var x :: ts) =  (SAST.Var x, ts)
         | lp (T.Underscore :: ts) = (SAST.Wildcard, ts)
+        | lp (T.LParen :: T.RParen :: ts) = (SAST.None, ts)
         | lp (T.LParen :: ts) =
           (case nextTerm ts of
             (t, T.RParen :: ts1) => (t, ts1)
