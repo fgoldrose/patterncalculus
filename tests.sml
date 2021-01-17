@@ -68,10 +68,10 @@ structure Tests = struct
     ce("((x -> ((((a b) -> (y -> a)) x) ((a->a) x))) (q p))", AST.Free "q", "test7");
     ce("((x -> (((p -> (y -> s)) x) (r x))) d)", AST.Free "s", "test8");
     ce("((x -> (((a b) -> yes) x)) (q p))", AST.Free "yes", "test9");
-    ce("(x->x y->y) z", AST.Case(AST.App(AST.Free "z", AST.Wildcard), AST.Bound(1, [AST.Right])), "test10");
+    ce("(x->x y->y) z", AST.Case(AST.App(AST.Free "z", AST.Wildcard), AST.Bound(0, [AST.Right])), "test10");
     ce("((p z)-> ((a->(a->a) z) p)) (p p)", AST.Free "p", "test11");
     ce("(x->((x -> y) z)) i", AST.None, "test12");
-    ce("(x->y a->(x y)) z", AST.Case(AST.App(AST.Wildcard, AST.Wildcard), AST.App(AST.Free "z", AST.Bound(1, [AST.Left]))), "test13");
+    ce("(x->y a->(x y)) z", AST.Case(AST.App(AST.Wildcard, AST.Wildcard), AST.App(AST.Free "z", AST.Bound(0, [AST.Left]))), "test13");
     ce("((x y)->y) ((_->(a b)) e)", AST.Free "b", "test14");
     or_tests();
     casebind_tests();

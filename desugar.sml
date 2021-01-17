@@ -29,7 +29,7 @@ end = struct
       (case t of
         S.Var x => (case Map.find(subs, x) of
                         SOME v => (v, Map.empty)
-                        | NONE => (A.Wildcard, Map.singleton(x, A.Bound (1, path)))
+                        | NONE => (A.Wildcard, Map.singleton(x, A.Bound (0, path)))
                       )   
       | S.App (t1, t2) =>
         let
