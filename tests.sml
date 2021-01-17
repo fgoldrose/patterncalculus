@@ -18,14 +18,22 @@ structure Tests = struct
     print ">>> testing or...\n";
     ce("(((a x)->x)|_->y) z", AST.Free "y", "ortest1");
     ce("((x->x)|_->y) z", AST.Free "z", "ortest2");
-    ce("(((p x)|x)->x) z", AST.Free "z", "ortest4");
+    ce("(((p x)|x)->x) z", AST.Free "z", "ortest3");
     ce("(((p x)|x)->x) (q z)", AST.Free "z", "ortest4");
     ce("((((p x)|x) r)->(x r)) (q z)", AST.App(AST.Free "q", AST.Free "z"), "ortest5");
     ce("((((p x)|x) r)->(x r)) (a q z)", AST.App(AST.Free "q", AST.Free "z"), "ortest6");
     ce("(r->(((a b)->b) r)) (q|(q z))", AST.Free("z"), "ortest7");
     ce("(r->((b->b) r)) (q|(q z))", AST.Free("q"), "ortest8");
+    ce("(((p x)|x)->x) (z|(a b))", AST.Free("z"), "ortest9");
+    ce("x:x y:y ((z:(x|y)->z) x)", AST.Free("x"), "ortest10");
+    ce("x:x y:y ((z:(x|y)->z) y)", AST.Free("y"), "ortest11");
+    ce("x:x y:y ((z:(x|y)->z) a)", AST.None, "ortest12");
+    ce("x:X y:Y (((z:(x|y)->z) | _->b) a)", AST.Free "b", "ortest13");
     print "\n")
 
+  fun def_tests() = (
+    
+    )
 
   (*Not sure what these should actually return but im leaving them to just
   see how the program manages them as the code changes.*)
@@ -63,7 +71,7 @@ structure Tests = struct
     ce("(x->x y->y) z", AST.Case(AST.App(AST.Free "z", AST.Wildcard), AST.Bound(1, [AST.Right])), "test10");
     ce("((p z)-> ((a->(a->a) z) p)) (p p)", AST.Free "p", "test11");
     ce("(x->((x -> y) z)) i", AST.None, "test12");
-    ce("(x->y a->(x y)) z", AST.Case(AST.App(AST.Wildcard, AST.Wildcard), AST.App(AST.Free "z", AST.Bound(1, [AST.Left]))), "test13");
+    ce("(x->y a->(x y)) z", AST.Case(AST.App(AST.Wildcard, AST.Wildcard), AST.App(AST.Free "z", AST.Bound(2, [AST.Left]))), "test13");
     ce("((x y)->y) ((_->(a b)) e)", AST.Free "b", "test14");
     or_tests();
     casebind_tests();

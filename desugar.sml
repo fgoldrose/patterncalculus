@@ -54,7 +54,7 @@ end = struct
           val (v1, s1) = getsubs t1 path subs
           val (v2, s2) = getsubs t2 path subs
         in
-          (v2, disjointunion(s1, s2))
+          (v2, s1)
         end
       | _ => (bindvars t subs, Map.empty)
 
@@ -82,8 +82,22 @@ end = struct
           in
             A.Case(leftbound, rightbound)
           end
-        | S.Let (t1, t2, t3) => bindvars (S.App(S.Case(t1, t3),t2)) subs
-        | S.Def (t1, t2) => bindvars t2 subs
+        | S.Let (t1, t2, t3) =>
+        let
+           val (boundt1, newsubs) = getsubs t1 [] subs
+           val boundt2 = bindvars t2 (disjointunion(subs,newsubs))
+           val boundt3 = bindvars t3 (disjointunion(subs,newsubs))
+         in
+           (*(A.App(A.Case(boundt1, boundt3),boundt2))*)
+            bindvars (S.App(S.Case(t1, t3), t2)) subs
+         end 
+        
+        | S.Def (t1, t2) => 
+        let
+           val (_, newsubs) = getsubs t1 [] subs
+         in
+           bindvars t2 (disjointunion(subs,newsubs))
+         end 
       )
     end
 

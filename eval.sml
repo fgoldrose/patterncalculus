@@ -1,8 +1,8 @@
 structure Eval : sig
 
-  val eval : AST.term -> AST.term
-  val step : AST.term -> AST.term option
-  val match: (AST.term * AST.term) -> bool
+  val eval : AST.term -> bool -> AST.term
+  val ev : AST.term -> bool -> AST.term 
+  val match: (AST.term * AST.term) -> bool -> bool
 end = struct
 
   fun err info = raise Fail ("runtime error: " ^ info)  
@@ -30,78 +30,65 @@ end = struct
     end
     
 
-  fun match (l, a) =
+  fun match (l, a) debug =
     let
       val v = (case (l, a) of
           (AST.Wildcard, _) => true
         | (_, AST.Wildcard) => true
         | (AST.Free x, AST.Free y) => x = y
-        | (AST.App(l1, l2), AST.App(a1, a2)) => match(l1, a1) andalso match(l2, a2)
-        | (AST.Or(t1, t2), t) => match(t1, t) orelse match(t2, t)
-        | (t, AST.Or(t1, t2)) => match(t, t1) orelse match(t, t2)
+        | (AST.App(l1, l2), AST.App(a1, a2)) => match(l1, a1) debug andalso match(l2, a2) debug
+        | (AST.Or(t1, t2), t) => match(t1, t) debug orelse match(t2, t) debug
+        | (t, AST.Or(t1, t2)) => match(t, t1) debug orelse match(t, t2) debug
         | _ => false
       )
     in
-      (*print ("match " ^AST.tos l ^ AST.tos a ^ (if v then " true\n" else " false\n"));*)
-      v
+      if debug
+      then (print ("match " ^AST.tos l ^ " with " ^ AST.tos a ^ (if v then " = true\n" else " = false\n"));
+              v)
+      else v
     end
 
-  (*step when in left side of case.
-    Should not reduce right sides of case
-    or reduce or, so that it can be properly matched later.*)
-  and casestep t = 
-    (case t of
-      AST.Or (t1, t2) => 
-        (case casestep t1 of
-          SOME t1' => SOME (AST.Or(t1', t2))
-          | NONE => NONE)
-          
-      | AST.Case (t1, t2) =>
-        (case casestep t1 of
-            SOME t1' => SOME (AST.Case(t1', t2))
-            | NONE => NONE)
-      | _ => step t)
+  and ev t debug =
+      let
+        val v = 
+        (case t of        
+        AST.Free x => AST.Free x
+      | AST.Bound(i, p) => AST.Bound(i, p) (*(case Map.find(env, i) of
+                              NONE => t
+                              | SOME v => followpath p v)*)
 
-  and step t =
-    (case t of        
-        AST.Free x => NONE
-      | AST.Bound(i, p) => NONE
-      | AST.Wildcard => NONE
-      | AST.None => NONE
-      | AST.Or (AST.None, t2) => SOME t2
+      | AST.Wildcard => AST.Wildcard 
+      | AST.None => AST.None
       | AST.Or (t1, t2) => 
-        (case step t1 of
-          SOME t1' => SOME (AST.Or(t1', t2))
-        | NONE => SOME t1)
+        (case ev t1 debug of
+          AST.None => ev t2 debug
+          | t1' => AST.Or(t1', t2))
 
-      | AST.Case (t1, t2) => 
-        (case casestep t1 of
-          SOME t1' => SOME (AST.Case(t1', t2))
-          | NONE => NONE)
+      | AST.Case (t1, t2) => (AST.Case(ev t1 debug, t2))
 
-      | AST.App(AST.None, _) => SOME AST.None
-      | AST.App(_, AST.None) => SOME AST.None
-      (*| AST.App(AST.Or(o1, o2), t2) => SOME (AST.Or(AST.App(o1, t2), AST.App(o2, t2)))
-      | AST.App(t1, AST.Or(o1, o2)) => SOME (AST.Or(AST.App(t1, o1), AST.App(t1, o2)))*)
       | AST.App(t1, t2) =>
-          (case casestep t2 of
-            SOME t2' => SOME (AST.App(t1, t2'))
-            | NONE => 
-              (case casestep t1 of
-                SOME t1' => SOME (AST.App(t1', t2))
-                | NONE => (case (t1, t2) of
-                  (AST.Case(l,r), _) =>
-                    if match(l, t2) 
-                    then SOME (opening t2 r)
-                    else SOME AST.None
-                  | (AST.Or(o1, o2), _) => SOME (AST.Or(AST.App(o1, t2), AST.App(o2, t2)))
-                  | (_, AST.Or(o1, o2)) => SOME (AST.Or(AST.App(t1, o1), AST.App(t1, o2)))
-                  | (_, _) => NONE)
-                  )))
+          (case (ev t1 debug, ev t2 debug) of
+            (AST.Case(l,r), t2') =>
+              if match(l, t2') debug
+              then ev (opening t2' r) debug
+              else AST.None
+            | (AST.None, _) => AST.None
+            | (_, AST.None) => AST.None
+            | (t1', AST.Or(o1, o2)) => ev (AST.Or((AST.App(t1', o1)), (AST.App(t1', o2)))) debug 
+            | (AST.Or(o1, o2), t2') => ev (AST.Or((AST.App(o1, t2')), (AST.App(o2, t2')))) debug
+            | (t1', t2') => AST.App(t1', t2')))
+      in
+        if debug 
+        then (print("eval " ^ AST.tos t ^ " = " ^ AST.tos v ^ "\n");
+                v)
+      else v
+      end
+                 
 
-  fun eval t =
-   ( case step t of
-         NONE => t
-         | SOME t' => eval t')
-      
+  fun resolveor (AST.Or (t1, _)) = resolveor t1
+    | resolveor t = t
+
+  fun eval t debug = resolveor (ev t debug)
+
+
 end
