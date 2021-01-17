@@ -40,9 +40,11 @@ structure Tests = struct
   fun casebind_tests() = (
     print ">>> testing case bind...\n";
     ce("z:p ((x->x)->x) ((y:z->y))", AST.Free "p", "cbtest1");
-    ce("y:p ((x->y) z -> z) ((y->y) a)", AST.Free("a"), "cbtest2");
-    ce("((x->x) z -> z) ((y->y) a)", AST.Free("a"), "cbtest3");
-    ce("z:q ((x->x) z -> z) ((y->z) a)", AST.None, "cbtest4");
+    ce("y:p ((x->y) z -> z) ((y->y) a)", AST.None, "cbtest2");
+    (*z isn't bound, but this should probably give a warning*)
+    ce("((x->x) z -> z) ((y->y) a)", AST.Free("z"), "cbtest3");
+    ce("z:q ((x->x) z -> z) ((y->z) a)", AST.Free("q"), "cbtest4");
+    ce("a:a b:b ((x->y)->(x y)) (a->b)", AST.App (AST.Free("a"), AST.Free("b")), "cbtest5");
     print "\n")
 
   fun recursion_tests() = (
@@ -63,8 +65,8 @@ structure Tests = struct
     ce("((y -> (((a b)->a) (y x))) z)", AST.Free "z", "test3");
     ce("((y->(x->y)) a)", AST.Case(AST.Wildcard, AST.Free "a"), "test4");
     ce("((first-> (first (a b))) ((x y)->x))", AST.Free "a", "test5");
-    ce("((a->((a y)->y)) (n->(f->(x->(f (n (f x)))))))", 
-              Interpret.interpret "(((n->(f->(x->(f (n (f x)))))) y) -> y)", "test6");    
+    ce("y:y ((a->((a y)->y)) (n->(f->(x->(f (n (f x)))))))", 
+              Interpret.interpret "y:y  (((n->(f->(x->(f (n (f x)))))) y) -> y)", "test6");    
     ce("((x -> ((((a b) -> (y -> a)) x) ((a->a) x))) (q p))", AST.Free "q", "test7");
     ce("((x -> (((p -> (y -> s)) x) (r x))) d)", AST.Free "s", "test8");
     ce("((x -> (((a b) -> yes) x)) (q p))", AST.Free "yes", "test9");
@@ -80,9 +82,6 @@ structure Tests = struct
     
 
 end
-
-
-
 
 
 

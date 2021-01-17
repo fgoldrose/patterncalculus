@@ -12,6 +12,8 @@ end = struct
       ([], _) => t
       | (AST.Left :: p', AST.App(l, _)) => followpath p' l
       | (AST.Right :: p', AST.App(_, r)) => followpath p' r
+      | (AST.Left :: p', AST.Case(l, _)) => followpath p' l
+      | (AST.Right :: p', AST.Case(_, r)) => followpath p' r
       | (_, AST.Or(t1, t2)) => AST.Or(followpath p t1, followpath p t2)
       | _ => AST.None)    
 
@@ -47,6 +49,7 @@ end = struct
                                       | SOME AST.None => false
                                       | SOME v => match(l, ev v env debug) env debug)
         | (AST.App(l1, l2), AST.App(a1, a2)) => match(l1, a1) env debug andalso match(l2, a2) env debug
+        | (AST.Case(l1, l2), AST.Case(a1, a2)) => match(l1, a1) env debug andalso match(l2, a2) env debug
         | (AST.Or(t1, t2), t) => match(t1, t) env debug orelse match(t2, t) env debug
         | (t, AST.Or(t1, t2)) => match(t, t1) env debug orelse match(t, t2) env debug
         | _ => false
@@ -76,7 +79,6 @@ end = struct
           | t1' => AST.Or(t1', sub t2 env 0))
 
       | AST.Case (t1, t2) => AST.Case(ev t1 env debug, sub t2 env 1)
-      | AST.Closure(t1, t2, e) => AST.Closure(t1, t2, e)
 
       | AST.App(t1, t2) =>
           (case (ev t1 env debug, ev t2 env debug) of

@@ -36,7 +36,22 @@ end = struct
           val (v1, s1) = getsubs t1 (path @ [A.Left]) subs
           val (v2, s2) = getsubs t2 (path @ [A.Right]) subs
         in
-          (A.App(v1, v2), disjointunion(s1, s2))
+          (case t1 of
+            S.Case _ => (A.App(v1, v2), Map.empty)
+            | _ => (A.App(v1, v2), disjointunion(s1, s2))
+            )
+        end
+      | S.Case (t1, t2) =>
+        let
+          val incrsubs = Map.map incrlevel subs
+          val (leftbound, newsubs) = getsubs t1 [] subs
+          val (rightbound,_ ) = getsubs t2 [](disjointunion (incrsubs, newsubs))
+          val (rightbound, rsubs) = getsubs t2 (path @ [A.Right]) (disjointunion (incrsubs, newsubs))
+          val (_, lsubs) = getsubs t1 (path @ [A.Left]) subs
+ 
+          
+        in
+          (A.Case(leftbound, rightbound), disjointunion(lsubs, rsubs))
         end
       | S.Or (t1, t2) =>
         let

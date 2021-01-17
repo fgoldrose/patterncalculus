@@ -11,7 +11,6 @@ structure AST = struct
     | Wildcard
     | Or of term * term
     | None
-    | Closure of term * term * term list
 
   fun pathTos [] = ""
     | pathTos (Left :: p) = "L" ^ pathTos p 
@@ -24,8 +23,6 @@ structure AST = struct
     | tos Wildcard = "_"
     | tos (Or (t1, t2)) =  "(" ^ tos t1 ^ "|" ^ tos t2 ^ ")"
     | tos None = "NONE"
-    | tos (Closure(t1,t2,e)) = "(" ^ tos t1 ^ "->" ^ tos t2 ^ ")" ^ "[" ^ concat (map tos e) ^ "]"
-    
                   
                   
 end
