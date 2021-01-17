@@ -26,9 +26,6 @@ end = struct
     (*bind the term and return the new substitutions map as well.
       Called on the left side of case.*)
     fun getsubs t path subs =
-      let
-        val incrsubs = Map.map incrlevel subs
-      in
       (case t of
         S.Var x => (case Map.find(subs, x) of
                         SOME v => (v, Map.empty)
@@ -36,16 +33,16 @@ end = struct
                       )   
       | S.App (t1, t2) =>
         let
-          val (v1, s1) = getsubs t1 (path @ [A.Left]) incrsubs
-          val (v2, s2) = getsubs t2 (path @ [A.Right]) incrsubs
+          val (v1, s1) = getsubs t1 (path @ [A.Left]) subs
+          val (v2, s2) = getsubs t2 (path @ [A.Right]) subs
         in
           (A.App(v1, v2), disjointunion(s1, s2))
         end
       | S.Or (t1, t2) =>
         let
-          val (b1, s1) = getsubs t1 path incrsubs
-          val (b2, s2) = getsubs t2 path incrsubs
-          val ormap = Map.intersectWith (fn (v1, v2) => A.Or(incrlevel v1, incrlevel v2)) (s1, s2)
+          val (b1, s1) = getsubs t1 path subs
+          val (b2, s2) = getsubs t2 path subs
+          val ormap = Map.intersectWith (fn (v1, v2) => A.Or(v1, v2)) (s1, s2)
         in
           (A.Or(b1, b2), ormap)
         end
@@ -54,52 +51,34 @@ end = struct
           val (v1, s1) = getsubs t1 path subs
           val (v2, s2) = getsubs t2 path subs
         in
-          (v2, s1)
+          (v2, disjointunion(s1, s2))
         end
       | _ => (bindvars t subs, Map.empty)
 
       )
-    end
 
 
     and bindvars t subs =
-      let
-        val incrsubs = Map.map incrlevel subs
-      in
       (case t of
           S.Var x => (case Map.find(subs, x) of
                         SOME v => v
                         | NONE => A.Free x
                       )
         | S.Wildcard => A.Wildcard
-        | S.Or (t1, t2) => A.Or(bindvars t1 incrsubs, bindvars t2 incrsubs)
+        | S.Or (t1, t2) => A.Or(bindvars t1 subs, bindvars t2 subs)
 
-        | S.App (t1, t2) => A.App(bindvars t1 incrsubs, bindvars t2 incrsubs)
+        | S.App (t1, t2) => A.App(bindvars t1 subs, bindvars t2 subs)
         | S.Case (t1, t2) => 
           let
+            val incrsubs = Map.map incrlevel subs
             val (leftbound, newsubs) = getsubs t1 [] subs
             val rightbound = bindvars t2 (disjointunion (incrsubs, newsubs))
           in
-            A.Case(leftbound, rightbound)
+          A.Case(leftbound, rightbound)
           end
-        | S.Let (t1, t2, t3) =>
-        let
-           val (boundt1, newsubs) = getsubs t1 [] subs
-           val boundt2 = bindvars t2 (disjointunion(subs,newsubs))
-           val boundt3 = bindvars t3 (disjointunion(subs,newsubs))
-         in
-           (*(A.App(A.Case(boundt1, boundt3),boundt2))*)
-            bindvars (S.App(S.Case(t1, t3), t2)) subs
-         end 
-        
-        | S.Def (t1, t2) => 
-        let
-           val (_, newsubs) = getsubs t1 [] subs
-         in
-           bindvars t2 (disjointunion(subs,newsubs))
-         end 
+        | S.Let (t1, t2, t3) => bindvars (S.App(S.Case(t1, t3),t2)) subs
+        | S.Def (t1, t2) => bindvars t2 subs
       )
-    end
 
     fun desugar t =
       bindvars t Map.empty

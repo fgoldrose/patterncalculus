@@ -32,7 +32,7 @@ structure Tests = struct
     print "\n")
 
   fun def_tests() = (
-    
+
     )
 
   (*Not sure what these should actually return but im leaving them to just
@@ -71,7 +71,7 @@ structure Tests = struct
     ce("(x->x y->y) z", AST.Case(AST.App(AST.Free "z", AST.Wildcard), AST.Bound(1, [AST.Right])), "test10");
     ce("((p z)-> ((a->(a->a) z) p)) (p p)", AST.Free "p", "test11");
     ce("(x->((x -> y) z)) i", AST.None, "test12");
-    ce("(x->y a->(x y)) z", AST.Case(AST.App(AST.Wildcard, AST.Wildcard), AST.App(AST.Free "z", AST.Bound(2, [AST.Left]))), "test13");
+    ce("(x->y a->(x y)) z", AST.Case(AST.App(AST.Wildcard, AST.Wildcard), AST.App(AST.Free "z", AST.Bound(1, [AST.Left]))), "test13");
     ce("((x y)->y) ((_->(a b)) e)", AST.Free "b", "test14");
     or_tests();
     casebind_tests();

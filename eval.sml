@@ -20,8 +20,8 @@ end = struct
       fun sub k u t = 
         (case t of
         AST.Bound(i,p) => if i = k then followpath p u else t
-      | AST.App(t1,t2) => AST.App(sub (k+1) u t1, sub (k+1) u t2)
-      | AST.Or(t1,t2) => AST.Or(sub (k+1) u t1, sub (k+1) u t2)
+      | AST.App(t1,t2) => AST.App(sub k u t1, sub k u t2)
+      | AST.Or(t1,t2) => AST.Or(sub k u t1, sub k u t2)
       | AST.Case(l,r) => AST.Case(sub k u l, sub (k+1) u r)
       | _ => t
     )
@@ -77,6 +77,7 @@ end = struct
             | (t1', AST.Or(o1, o2)) => ev (AST.Or((AST.App(t1', o1)), (AST.App(t1', o2)))) debug 
             | (AST.Or(o1, o2), t2') => ev (AST.Or((AST.App(o1, t2')), (AST.App(o2, t2')))) debug
             | (t1', t2') => AST.App(t1', t2')))
+      
       in
         if debug 
         then (print("eval " ^ AST.tos t ^ " = " ^ AST.tos v ^ "\n");
