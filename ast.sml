@@ -1,7 +1,7 @@
 structure AST = struct
 
 
-  datatype direction = Left | Right
+  datatype direction = Left | Right | Field of string
 
   datatype term
     = Free of string
@@ -11,10 +11,15 @@ structure AST = struct
     | Wildcard
     | Or of term * term
     | None
+    | Record of (string * term) list
+
+  (*fun eq (Record t1, Record t2) = 
+    | eq (t1, t2) = (t1 = t2)*)
 
   fun pathTos [] = ""
     | pathTos (Left :: p) = "L" ^ pathTos p 
     | pathTos (Right :: p) = "R" ^ pathTos p
+    | pathTos (Field s :: p) = s ^ pathTos p
 
   and tos (Free x) = x
     | tos (Bound (i, p)) = Int.toString i ^ "." ^ pathTos p
@@ -23,6 +28,6 @@ structure AST = struct
     | tos Wildcard = "_"
     | tos (Or (t1, t2)) =  "(" ^ tos t1 ^ "|" ^ tos t2 ^ ")"
     | tos None = "NONE"
-                  
-                  
+    | tos (Record t) = "{" ^ concat (map (fn (s, x) => s ^ "= " ^ tos x ^ ",") t) (*(Map.listItemsi t))*) ^ "}"
+                               
 end

@@ -13,6 +13,19 @@ end = struct
             
   fun nextTerm toks =
     let
+      fun parserecord ts =
+        (case ts of
+          T.RBrace :: ts' => ([], ts')
+          | T.Var x :: T.Equals :: ts' => 
+            (case nextTerm ts' of 
+              (t, T.Comma :: rest) => 
+                (case parserecord rest of
+                  (ls, r) => ((x, t) :: ls, r))
+              | (t, T.RBrace :: rest) => ([(x, t)], rest)
+              | _ => err ("in record parse at " ^ (toksStr ts)))
+
+          | _ => err ("in record parse at " ^ (toksStr ts)))
+
       fun lp (T.Var x :: ts) =  (SAST.Var x, ts)
         | lp (T.Underscore :: ts) = (SAST.Wildcard, ts)
         | lp (T.LParen :: T.RParen :: ts) = (SAST.None, ts)
@@ -20,9 +33,17 @@ end = struct
           (case nextTerm ts of
             (t, T.RParen :: ts1) => (t, ts1)
             | _ => err "error at end of parens")
-        | lp ts = err "error at " toksStr ts
+        | lp (T.LBrace :: ts) = 
+           (case parserecord ts of
+            (ls, rest) => (SAST.Record ls, rest))
+        | lp ts = err ("error at " ^ toksStr ts)
 
       and combine (t1, T.RParen :: ts) = (t1, T.RParen :: ts)
+        | combine (t1, T.RBrace :: ts) = (t1, T.RBrace :: ts)
+        | combine (t1, T.Comma :: ts) = (t1, T.Comma :: ts)
+        
+
+        | combine (t1, T.Dot :: T.Var x :: ts) = combine (SAST.Access(t1, x), ts)
 
         | combine (t1, (T.RightArrow :: ts)) =
             (case lp ts of

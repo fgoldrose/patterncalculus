@@ -31,6 +31,11 @@ end = struct
     | nextToken (#"|" :: cs) = SOME (T.Bar, cs)
     | nextToken (#"_" :: cs) = SOME (T.Underscore, cs)
     | nextToken (#":" :: cs) = SOME (T.Colon, cs)
+    | nextToken (#"," :: cs) = SOME (T.Comma, cs)
+    | nextToken (#"{" :: cs) = SOME (T.LBrace, cs)
+    | nextToken (#"}" :: cs) = SOME (T.RBrace, cs)
+    | nextToken (#"=" :: cs) = SOME (T.Equals, cs)
+    | nextToken (#"." :: cs) = SOME (T.Dot, cs)
     | nextToken (#"-" :: #">" :: cs) = SOME (T.RightArrow, cs)
     | nextToken (c :: cs) =
       if Char.isAlphaNum c then var c cs

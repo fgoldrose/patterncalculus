@@ -41,6 +41,14 @@ end = struct
             | _ => (A.App(v1, v2), disjointunion(s1, s2))
             )
         end
+      | S.Record (r) =>
+        let
+          val boundr = map (fn (s, x) => 
+                              (case getsubs x (path @ [A.Field s]) subs of
+                                (b, _) => (s, b))) r
+        in
+          (A.Record boundr, Map.empty)
+        end
       | S.Case (t1, t2) =>
         let
           val incrsubs = Map.map incrlevel subs
@@ -94,7 +102,21 @@ end = struct
           end
         | S.Let (t1, t2, t3) => bindvars (S.App(S.Case(t1, t3),t2)) subs
         | S.Def (t1, t2) => bindvars t2 subs
-      )
+        | S.Record ls => 
+          A.Record(Map.listItemsi 
+                  (foldl 
+                    (fn ((s, x), m) => 
+                      if Map.inDomain (m,s) then raise Fail "record may not have two identical keys"
+                      else Map.insert (m, s, bindvars x subs))
+                     Map.empty ls))
+        | S.Access (t, f) => (case bindvars t subs of
+            A.Bound (i,p) => A.Bound(i, p @ [AST.Field f])
+            | t' => A.App (A.Case(A.Wildcard, A.Bound (0, [AST.Field f])), t')
+          ))
+
+        
+
+      
 
     fun desugar t =
       bindvars t Map.empty

@@ -14,6 +14,10 @@ end = struct
       | (AST.Right :: p', AST.App(_, r)) => followpath p' r
       | (AST.Left :: p', AST.Case(l, _)) => followpath p' l
       | (AST.Right :: p', AST.Case(_, r)) => followpath p' r
+      | (AST.Field f :: p', AST.Record r) => 
+          (case List.find (fn (s, _) => s = f) r of
+            NONE => NONE
+            | SOME (_, x) => followpath p' x)
       | (_, AST.Or(t1, t2)) => (case (followpath p t1) of
         SOME t1' => SOME t1'
         | NONE => followpath p t2)
@@ -33,10 +37,20 @@ end = struct
       | AST.Case (t1, t2) => AST.Case (sub t1 env k, sub t2 env (k + 1))
       | AST.Or (t1, t2) => AST.Or (sub t1 env k, sub t2 env k)
       | AST.App (t1, t2) => AST.App (sub t1 env k, sub t2 env k)
+      | AST.Record r => AST.Record (map (fn (s, x) => (s, (sub x env k))) r)
       | _ => t
       )
 
-  fun match (l, a) env debug =
+  fun recordmatch (l, a) env debug = 
+    (case (l, a) of
+      ([], []) => true
+      | ((sl, tl) :: rl, (sa, ta):: ra) => 
+        sl = sa 
+        andalso match(tl, ta) env debug
+        andalso recordmatch (rl, ra) env debug
+      | _ => false)
+      
+  and match (l, a) env debug =
     let
       val v = (case (l, a) of
         (AST.None, AST.None) => true
@@ -53,8 +67,10 @@ end = struct
                                       | SOME v => match(l, ev v env debug) env debug)
         | (AST.App(l1, l2), AST.App(a1, a2)) => match(l1, a1) env debug andalso match(l2, a2) env debug
         | (AST.Case(l1, l2), AST.Case(a1, a2)) => match(l1, a1) env debug andalso match(l2, a2) env debug
+        | (AST.Record l1, AST.Record a1) => recordmatch (l1, a1) env debug
         | (AST.Or(t1, t2), t) => match(t1, t) env debug orelse match(t2, t) env debug
         | (t, AST.Or(t1, t2)) => match(t, t1) env debug orelse match(t, t2) env debug
+        
         | _ => false
       )
     in
@@ -76,6 +92,8 @@ end = struct
 
       | AST.Wildcard => AST.Wildcard 
       | AST.None => AST.None
+      | AST.Record ls => AST.Record (map (fn (s, x) =>(s, ev x env debug)) ls)
+
       | AST.Or (t1, t2) => 
         (case ev t1 env debug of
           AST.None => ev t2 env debug

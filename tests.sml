@@ -6,7 +6,7 @@ structure Tests = struct
         let 
           fun message a b = m ^ " FAILED: got " ^ (AST.tos a) ^ " but expected " ^ (AST.tos b) ^ "\n"
         in
-        if v = y then (print(m ^ " succeeded\n")) else print(message v y)
+        if v = y then () else print("\t" ^ message v y)
         end
 
     fun ce (x, y, m) =
@@ -24,16 +24,12 @@ structure Tests = struct
     ce("((((p x)|x) r)->(x r)) (a q z)", AST.App(AST.Free "q", AST.Free "z"), "ortest6");
     ce("(r->(((a b)->b) r)) (q|(q z))", AST.Free("z"), "ortest7");
     ce("(r->((b->b) r)) (q|(q z))", AST.Free("q"), "ortest8");
-    ce("(((p x)|x)->x) (z|(a b))", AST.Free("z"), "ortest9");
+    ce("(((p x)|x)->x) (z|(a b))", AST.Free("b"), "ortest9"); (*this is an ambiguous case*)
     ce("x:x y:y ((z:(x|y)->z) x)", AST.Free("x"), "ortest10");
     ce("x:x y:y ((z:(x|y)->z) y)", AST.Free("y"), "ortest11");
     ce("x:x y:y ((z:(x|y)->z) a)", AST.None, "ortest12");
     ce("x:X y:Y (((z:(x|y)->z) | _->b) a)", AST.Free "b", "ortest13");
     print "\n")
-
-  fun def_tests() = (
-
-    )
 
   (*Not sure what these should actually return but im leaving them to just
   see how the program manages them as the code changes.*)
@@ -63,7 +59,10 @@ structure Tests = struct
         ce("((q ->a-> a) (((a b)->a) x) t)", AST.Free "t", "nonetest2");
         expect(Interpret.file "bools.txt", AST.Free "y", "bools"); 
         print "\n")
-
+  fun record_tests() = (
+    print ">>> testing records...\n";
+    ce("((r t)->{x = r.x, y= t.y}) ({x=a} {y=b})", AST.Record [("x", AST.Free "a"), ("y", AST.Free "b")], "recordtest1");
+    print "\n")
 
   fun run () =(
     print ">>> running tests...\n";
@@ -87,6 +86,7 @@ structure Tests = struct
     casebind_tests();
     recursion_tests();
     none_tests();
+    record_tests();
     print "<<< tests done.\n")
     
 
