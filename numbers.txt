@@ -1,18 +1,16 @@
-rec: (f->f f)
 0:0 1:1
 
 digit: (0 | 1)
 
 succ: ((0 -> 1)| (1->1 0))
-number: (rec (number->(digit| (rec number) digit)))
+number: (digit| (number) digit)
 
-add1: (rec (add1->n:number->
+add1: (n:number->
     (succ n
     |   (num lastdigit):n
         d: (succ lastdigit)
         ((digit-> (num d))
-        | _ -> rec add1 num 0
-        ) d
-    )))
+        | _ -> add1 num 0
+        ) d))
 
 (add1 (1 0 1))

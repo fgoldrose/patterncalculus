@@ -115,9 +115,55 @@ end = struct
           ))
 
       
+  fun contains outer inner  = 
+      (if outer = inner then true
+      else (case outer of
+           S.Let(t1, t2, t3) => contains t3 inner
+          | S.App(t1,t2) => contains t1 inner orelse contains t2 inner
+          | S.Case(t1,t2) => contains t1 inner orelse contains t2 inner
+          | S.Or(t1,t2) => contains t1 inner orelse contains t2 inner
+          | _ => false)
+        )
+
+    fun subst t v b =
+      (if t = v then b
+      else (case t of
+          S.Let(t1, t2, t3) =>  S.Let(subst t1 v b, subst t2 v b, subst t3 v b)
+          | S.App(t1,t2) => S.App(subst t1 v b, subst t2 v b)
+          | S.Case(t1,t2) => S.Case (subst t1 v b, subst t2 v b)
+          | S.Or(t1,t2) => S.Or (subst t1 v b, subst t2 v b)
+          | _ => t)
+        )
+
+
+      (*find recursive let and defs and desugar them*)
+    fun desugarrec t =
+      let
+        fun recursive f = S.App(S.Case(S.Var " r", S.App(S.Var " r", S.Var " r")), f)
+      in
+        
+        (case t of
+          S.Let (S.Var x, S.Var y, t3) => S.Let(S.Var x, S.Var y, desugarrec t3)
+          | S.Let (S.Var x, t2, t3) =>
+            if contains t2 (S.Var x) then
+              (S.Let(S.Var x, 
+                    recursive(S.Case(S.Var x, subst t2 (S.Var x) (recursive (S.Var x)))), 
+                    desugarrec t3))
+            else S.Let (S.Var x, t2, desugarrec t3)
+          | S.Let(t1, t2, t3) => S.Let(t1, t2, desugarrec t3)
+          | S.Def(S.Var x, t2) => 
+              if contains t2 (S.Var x) 
+              then S.Def(S.Var x, recursive(S.Case(S.Var x, subst t2 (S.Var x) (recursive (S.Var x)))))
+              else S.Def(S.Var x, t2)
+          | S.App(t1,t2) => S.App (desugarrec t1, desugarrec t2)
+          | S.Case(t1,t2) => S.Case (desugarrec t1, desugarrec t2)
+          | S.Or(t1,t2) => S.Or (desugarrec t1, desugarrec t2)
+          | _ => t)
+      end
+      
 
     fun desugar t =
-      bindvars t Map.empty
+      bindvars (desugarrec t) Map.empty
 
     fun ds s = desugar (Parse.parse (Scan.scan s));
 
