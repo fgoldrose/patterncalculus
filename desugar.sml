@@ -114,8 +114,6 @@ end = struct
             | t' => A.App (A.Case(A.Wildcard, A.Bound (0, [AST.Field f])), t')
           ))
 
-        
-
       
 
     fun desugar t =

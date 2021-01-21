@@ -9,7 +9,8 @@ end = struct
 
   fun followpath p t =
     (case (p, t) of
-      ([], _) => SOME t
+      (*(_, AST.Wildcard) => SOME (AST.Case(AST.Wildcard, AST.Bound(0, p)))*)
+       ([], _) => SOME t
       | (AST.Left :: p', AST.App(l, _)) => followpath p' l
       | (AST.Right :: p', AST.App(_, r)) => followpath p' r
       | (AST.Left :: p', AST.Case(l, _)) => followpath p' l
@@ -21,7 +22,7 @@ end = struct
       | (_, AST.Or(t1, t2)) => (case (followpath p t1) of
         SOME t1' => SOME t1'
         | NONE => followpath p t2)
-       
+      
       | _ => NONE)    
 
   fun getbound ls i p =
@@ -54,22 +55,27 @@ end = struct
     let
       val v = (case (l, a) of
         (AST.None, AST.None) => true
-        | (AST.None, _) => false
+        |  (AST.Wildcard, AST.None) => false
+        | (AST.None, AST.Wildcard) => false
         |  (AST.Wildcard, _) => true
-        | (_, AST.None) => false
         | (_, AST.Wildcard) => true
-        | (AST.Free x, AST.Free y) => x = y
+        
+        | (AST.Or(t1, t2), t) => match(t1, t) env debug orelse match(t2, t) env debug
+        | (t, AST.Or(t1, t2)) => match(t, t1) env debug orelse match(t, t2) env debug
         | (AST.Bound (i, p), _) => (case getbound env i p of
                                       NONE => false
                                       | SOME v => match(ev v env debug, a) env debug)
         | (_, AST.Bound (i, p)) => (case getbound env i p of
                                       NONE => false
                                       | SOME v => match(l, ev v env debug) env debug)
+      
+        | (AST.Free x, AST.Free y) => x = y
+        | (AST.App(AST.Case(_, _), _), _) => match(ev l env debug, a) env debug
+        | (_, AST.App(AST.Case(_, _), _)) => match(l, ev a env debug) env debug
         | (AST.App(l1, l2), AST.App(a1, a2)) => match(l1, a1) env debug andalso match(l2, a2) env debug
+
         | (AST.Case(l1, l2), AST.Case(a1, a2)) => match(l1, a1) env debug andalso match(l2, a2) env debug
         | (AST.Record l1, AST.Record a1) => recordmatch (l1, a1) env debug
-        | (AST.Or(t1, t2), t) => match(t1, t) env debug orelse match(t2, t) env debug
-        | (t, AST.Or(t1, t2)) => match(t, t1) env debug orelse match(t, t2) env debug
         
         | _ => false
       )

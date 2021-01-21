@@ -1,11 +1,13 @@
 true: _
-false: ()
 
-if: (b->then->else->(((() ->else) | (_->then)) b))
-and: (b->p->((b p)))
-or: (b->p->(b|p))
+maybe: (_|())
+false:maybe:()
+
+if: ((_->then->else->then)| (()->then->else->else))
+and: (b:maybe->p:maybe->((b p)))
+or: (b:maybe->p:maybe->(b|p))
 not: (() -> _)
-xor: (b->p->((b|p) (not (b p))))
+xor: (b->p:maybe->((b|p) (not (b p))))
 
-(if (xor true true) x y)
+(if (and (xor false true) (not true)) x y)
 

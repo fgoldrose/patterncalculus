@@ -4,9 +4,9 @@ rec: (f->f f)
 digit: (0 | 1)
 
 succ: ((0 -> 1)| (1->1 0))
+number: (rec (number->(digit| (rec number) digit)))
 
-
-add1: (rec (add1->n->
+add1: (rec (add1->n:number->
     (succ n
     |   (num lastdigit):n
         d: (succ lastdigit)
